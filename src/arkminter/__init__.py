@@ -1,5 +1,6 @@
 from .arkminter import (
     format_metadata,
+    get_existing_our_ark,
     mint_ark,
     put_objects,
     reserve_ark,
@@ -8,6 +9,7 @@ from .arkminter import (
 __all__ = [
     "mint_ark",
     "format_metadata",
+    "get_existing_our_ark",
     "put_objects",
     "reserve_ark",
 ]

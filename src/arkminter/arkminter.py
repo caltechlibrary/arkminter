@@ -4,8 +4,10 @@ import json
 import logging
 import logging.config
 import random
+import re
 
 from pathlib import Path
+from urllib.parse import unquote
 
 from botocore.exceptions import ClientError
 
@@ -79,6 +81,51 @@ def format_metadata(
         metadata["dateCreated"] = date
     metadata["url"] = metadata["@id"]
     return json.dumps(metadata, indent=2)
+
+
+def get_existing_our_ark(archival_object: dict, naan: str) -> str | None:
+    """Return our ARK from external_ark_url if present, configured, and valid."""
+    external_ark_url = str(archival_object.get("external_ark_url", "")).strip()
+    if not external_ark_url:
+        return None
+
+    our_naan = str(naan).strip()
+    if not our_naan:
+        logger.warning(
+            "⚠️ OUR_NAAN IS NOT CONFIGURED; SKIPPING external_ark_url VALIDATION: %s",
+            archival_object.get("component_id", ""),
+        )
+        return None
+
+    decoded = unquote(external_ark_url)
+    # Match both ark:/NAAN/name and ark:NAAN/name forms.
+    # TODO determine if existing ARK contains a Qualifier after the Assigned Name
+    match = re.search(r"ark:(?:/)?([0-9A-Za-z]+)/([^?#/]+)", decoded)
+    if not match:
+        logger.warning(
+            "⚠️ INVALID external_ark_url FORMAT: %s (%s)",
+            archival_object.get("component_id", ""),
+            external_ark_url,
+        )
+        return None
+
+    existing_naan = match.group(1)
+    if existing_naan.lower() != our_naan.lower():
+        logger.warning(
+            "⚠️ external_ark_url HAS A DIFFERENT NAAN THAN OUR_NAAN (%s): %s (%s)",
+            existing_naan,
+            archival_object.get("component_id", ""),
+            external_ark_url,
+        )
+        return None
+
+    existing_our_ark = f"ark:{existing_naan}/{match.group(2)}"
+    logger.info(
+        "☑️ OUR ARK FOUND IN external_ark_url: %s (%s)",
+        existing_our_ark,
+        archival_object.get("component_id", ""),
+    )
+    return existing_our_ark
 
 
 def build_ark_identifier(naan: str, shoulder: str = "", blade_length: int = 6) -> str:

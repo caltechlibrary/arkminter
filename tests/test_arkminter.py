@@ -43,6 +43,43 @@ def test_format_metadata_omits_optional_fields_when_empty():
     assert "dateCreated" not in metadata
 
 
+def test_get_existing_our_ark_returns_none_without_external_ark_url():
+    ao = {"component_id": "aspace_1"}
+    assert arkminter.get_existing_our_ark(ao, "77914") is None
+
+
+def test_get_existing_our_ark_returns_none_without_naan():
+    ao = {
+        "component_id": "aspace_1",
+        "external_ark_url": "https://digital.archives.caltech.edu/ark:/77914/abc123x",
+    }
+    assert arkminter.get_existing_our_ark(ao, "") is None
+
+
+def test_get_existing_our_ark_accepts_our_naan():
+    ao = {
+        "component_id": "aspace_1",
+        "external_ark_url": "https://digital.archives.caltech.edu/ark:/77914/abc123x",
+    }
+    assert arkminter.get_existing_our_ark(ao, "77914") == "ark:77914/abc123x"
+
+
+def test_get_existing_our_ark_rejects_non_our_naan():
+    ao = {
+        "component_id": "aspace_1",
+        "external_ark_url": "https://n2t.net/ark:/99999/abc123x",
+    }
+    assert arkminter.get_existing_our_ark(ao, "77914") is None
+
+
+def test_get_existing_our_ark_rejects_invalid_external_ark_url():
+    ao = {
+        "component_id": "aspace_1",
+        "external_ark_url": "https://example.org/not-an-ark",
+    }
+    assert arkminter.get_existing_our_ark(ao, "77914") is None
+
+
 def test_generate_betanumeric_string_defaults_to_5_characters():
     segment = arkminter.generate_betanumeric_string()
     assert len(segment) == 5
