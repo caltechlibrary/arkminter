@@ -26,6 +26,24 @@ def test_format_metadata_uses_supplied_nma_and_optional_fields():
     assert metadata["dateCreated"] == "2026-04-01"
 
 
+def test_build_ark_identifier_retries_when_check_digit_is_slash(monkeypatch):
+    # "0000b" is a known collision for naan="99999": its check digit computes
+    # to "/", which is only valid as the naan/name separator, never as a name
+    # character (see ark-resolver.js's betanumeric-only name regex).
+    betanumeric_strings = iter(["0000b", "00001"])
+    monkeypatch.setattr(
+        arkminter,
+        "generate_betanumeric_string",
+        lambda blade_length=6: next(betanumeric_strings),
+    )
+
+    ark = arkminter.build_ark_identifier(naan="99999", shoulder="")
+
+    name = ark.split("/", 1)[1]
+    assert "/" not in name
+    assert ark == "ark:99999/00001p"
+
+
 def test_format_metadata_omits_optional_fields_when_empty():
     ark = arkminter.build_ark_identifier(naan="99999", shoulder="")
     metadata = json.loads(

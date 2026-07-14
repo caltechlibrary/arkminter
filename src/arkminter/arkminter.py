@@ -129,11 +129,17 @@ def get_existing_our_ark(archival_object: dict, naan: str) -> str | None:
 
 
 def build_ark_identifier(naan: str, shoulder: str = "", blade_length: int = 6) -> str:
-    generated_betanumeric_string = generate_betanumeric_string(
-        blade_length=blade_length
-    )
-    check_string = f"{naan}/{shoulder}{generated_betanumeric_string}".lower()
-    check_digit = calculate_check_digit(check_string)
+    # The check digit is computed over "naan/name", so XDIGIT includes '/' to
+    # cover that separator. But the name itself must stay betanumeric-only
+    # (see ark-resolver.js), so a '/' check digit is rejected and retried.
+    while True:
+        generated_betanumeric_string = generate_betanumeric_string(
+            blade_length=blade_length
+        )
+        check_string = f"{naan}/{shoulder}{generated_betanumeric_string}".lower()
+        check_digit = calculate_check_digit(check_string)
+        if check_digit != "/":
+            break
     base_name = f"{shoulder}{generated_betanumeric_string}{check_digit}"
     return f"ark:{naan}/{base_name}"
 
